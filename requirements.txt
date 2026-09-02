@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+jinja2
+google-genai
+requests
+holidays
+python-dotenv
+python-multipart
