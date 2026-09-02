@@ -83,6 +83,23 @@
     color: #3a7a3a;
   }
   .badge.warn { background: #fbeee7; color: var(--accent-dark); }
+  label.field-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--sub);
+    margin-bottom: 6px;
+  }
+  input#keyword {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    font-family: inherit;
+  }
+  input#keyword:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  #used-keyword { margin-top: 4px; font-size: 0.82rem; color: var(--sub); }
 </style>
 </head>
 <body>
@@ -91,6 +108,9 @@
   <p class="sub">버튼을 누르면 오늘 날씨·키워드를 반영한 할아버지 말투 블로그 글 초안이 만들어져요.</p>
 
   <div class="card">
+    <label class="field-label" for="keyword">오늘 쓸 키워드/주제 (비워두면 자동으로 골라줘요)</label>
+    <input id="keyword" type="text" maxlength="60" placeholder="예: 홍어 삭히는 법, 가을 보양식, 홍어삼합 후기...">
+
     <button id="generate">오늘의 블로그 글 만들기</button>
     <div id="status"></div>
 
@@ -101,6 +121,7 @@
         <button id="regenerate">다시 만들기</button>
       </div>
       <span id="quality-badge" class="badge" style="display:none;"></span>
+      <div id="used-keyword"></div>
     </div>
   </div>
 </div>
@@ -113,6 +134,8 @@ const statusEl = document.getElementById('status');
 const resultBox = document.getElementById('result-box');
 const resultEl = document.getElementById('result');
 const badgeEl = document.getElementById('quality-badge');
+const keywordInput = document.getElementById('keyword');
+const usedKeywordEl = document.getElementById('used-keyword');
 
 async function runGenerate() {
   btn.disabled = true;
@@ -121,11 +144,16 @@ async function runGenerate() {
   statusEl.classList.remove('error');
 
   try {
-    const res = await fetch('/api/generate', { method: 'POST' });
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword: keywordInput.value.trim() || null }),
+    });
     const data = await res.json();
 
     if (!res.ok) {
-      statusEl.textContent = data.detail || '잠시 후 다시 시도해 주세요.';
+      const detail = typeof data.detail === 'string' ? data.detail : '잠시 후 다시 시도해 주세요.';
+      statusEl.textContent = detail;
       statusEl.classList.add('error');
       return;
     }
@@ -133,6 +161,7 @@ async function runGenerate() {
     resultEl.value = data.draft;
     resultBox.style.display = 'block';
     statusEl.textContent = '완성됐어요. 내용을 확인하고 복사해서 붙여넣어 주세요.';
+    usedKeywordEl.textContent = '사용된 키워드/주제: ' + data.keyword;
 
     if (data.passed) {
       badgeEl.textContent = '품질 검사 통과';

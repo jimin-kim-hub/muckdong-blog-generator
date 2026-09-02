@@ -47,7 +47,7 @@ def build_user_prompt(context: dict) -> str:
     return f"""오늘 정보:
 - 날짜: {context['date']} ({context['season']})
 - {weather_line}{holiday_line}
-- 이달의 인기 검색어: '{context['keyword']}' — 이 단어를 손주의 질문이나 할아버지의 답변 속에 자연스럽게 최소 한 번 넣어주세요.
+- 오늘 글의 키워드/주제: '{context['keyword']}' — 이 단어를 손주의 질문이나 할아버지의 답변 속에 자연스럽게 최소 한 번 넣어주세요.
 
 가게 정보:
 - 상호: {SHOP_INFO['name']}

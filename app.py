@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
 
 from collector import collect_context
 from quality import generate_with_quality_gate
@@ -23,6 +24,11 @@ templates = Jinja2Templates(directory="templates")
 
 MIN_INTERVAL_SEC = 5  # 버튼 연타 방지
 DAILY_LIMIT = 50  # 비용 보호 장치
+KEYWORD_MAX_LENGTH = 60
+
+
+class GenerateRequest(BaseModel):
+    keyword: str | None = Field(default=None, max_length=KEYWORD_MAX_LENGTH)
 
 _last_call_at = 0.0
 _daily_count = {"date": None, "count": 0}
@@ -34,7 +40,7 @@ def index(request: Request):
 
 
 @app.post("/api/generate")
-def generate():
+def generate(body: GenerateRequest):
     global _last_call_at
 
     now = time.time()
@@ -52,7 +58,7 @@ def generate():
     _daily_count["count"] += 1
 
     try:
-        context = collect_context()
+        context = collect_context(keyword=body.keyword)
         result = generate_with_quality_gate(context)
     except Exception:
         raise HTTPException(status_code=500, detail="글을 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.")
@@ -60,4 +66,5 @@ def generate():
     return {
         "draft": result["draft"],
         "passed": result["passed"],
+        "keyword": context["keyword"],
     }

@@ -77,13 +77,17 @@ def get_popular_keyword() -> str:
     return random.choice(POPULAR_KEYWORDS)
 
 
-def collect_context() -> dict:
-    """4개 소스를 한 번에 모아 글 생성에 필요한 컨텍스트를 만든다."""
+def collect_context(keyword: str | None = None) -> dict:
+    """4개 소스를 한 번에 모아 글 생성에 필요한 컨텍스트를 만든다.
+
+    keyword를 직접 지정하면 그 키워드/주제를 쓰고, 비워두면
+    POPULAR_KEYWORDS 중 하나를 자동으로 고른다.
+    """
     today = date.today()
     return {
         "date": today.isoformat(),
         "season": get_season_phrase(today),
         "weather": get_weather(),
         "holiday": get_holiday_name(today),
-        "keyword": get_popular_keyword(),
+        "keyword": keyword.strip() if keyword and keyword.strip() else get_popular_keyword(),
     }
