@@ -13,7 +13,7 @@ from datetime import date
 import holidays
 import requests
 
-from config import POPULAR_KEYWORDS
+from config import POPULAR_KEYWORDS_BY_CATEGORY
 
 # 묵동(서울 중랑구) 대략 좌표
 MUKDONG_LAT = 37.6115
@@ -74,7 +74,10 @@ def get_holiday_name(today: date | None = None) -> str | None:
 
 
 def get_popular_keyword() -> str:
-    return random.choice(POPULAR_KEYWORDS)
+    """카테고리를 먼저 고르고 그 안에서 키워드를 골라, 특정 카테고리로
+    쏠리지 않고 브랜드·지역·음식·정보·상황 검색이 고르게 섞이게 한다."""
+    category = random.choice(list(POPULAR_KEYWORDS_BY_CATEGORY.keys()))
+    return random.choice(POPULAR_KEYWORDS_BY_CATEGORY[category])
 
 
 def collect_context(keyword: str | None = None) -> dict:
