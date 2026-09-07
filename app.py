@@ -5,6 +5,7 @@
 일반 메시지만 보여준다. 버튼 연타 방지 + 일일 호출 횟수 제한을 둔다.
 """
 
+import logging
 import time
 from datetime import date
 
@@ -18,6 +19,8 @@ from collector import collect_context
 from quality import generate_with_quality_gate
 
 load_dotenv()
+
+logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(title="묵동홍어마을 블로그 글 생성기")
 templates = Jinja2Templates(directory="templates")
@@ -61,6 +64,7 @@ def generate(body: GenerateRequest):
         context = collect_context(keyword=body.keyword)
         result = generate_with_quality_gate(context)
     except Exception:
+        logger.exception("글 생성 실패")  # 사용자에겐 안 보이고 서버 로그에만 남음
         raise HTTPException(status_code=500, detail="글을 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.")
 
     return {
