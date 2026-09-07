@@ -64,7 +64,8 @@ def generate(body: GenerateRequest):
         raise HTTPException(status_code=500, detail="글을 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.")
 
     return {
-        "draft": result["draft"],
+        "title": result["title"],
+        "body": result["body"],
         "passed": result["passed"],
         "keyword": context["keyword"],
     }

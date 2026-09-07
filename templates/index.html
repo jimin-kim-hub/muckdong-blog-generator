@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>묵동홍어마을 블로그 글 생성기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #faf7f2;
@@ -13,6 +16,7 @@
     --accent: #b5451b;
     --accent-dark: #8f3714;
     --border: #e7ddd1;
+    --font-body: 'Nanum Gothic', -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   }
   * { box-sizing: border-box; }
   body {
@@ -51,17 +55,61 @@
   #status { margin-top: 12px; font-size: 0.9rem; color: var(--sub); min-height: 1.2em; }
   #status.error { color: var(--accent); }
   #result-box { margin-top: 20px; display: none; }
-  textarea#result {
+
+  label.field-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--sub);
+    margin-bottom: 6px;
+  }
+  input#keyword {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    font-family: inherit;
+  }
+  input#keyword:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  #used-keyword { margin-top: 4px; font-size: 0.82rem; color: var(--sub); }
+
+  .title-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  input#title {
+    flex: 1;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: 700;
+  }
+  input#title:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button#copy-title {
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  #result {
     width: 100%;
     min-height: 320px;
     padding: 14px;
     border: 1px solid var(--border);
     border-radius: 10px;
-    font-size: 0.95rem;
-    line-height: 1.6;
-    resize: vertical;
-    font-family: inherit;
+    font-family: var(--font-body);
+    font-size: 19px;
+    line-height: 1.7;
+    overflow-y: auto;
   }
+  #result:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  #result p { margin: 0 0 1em; }
+  #result p:last-child { margin-bottom: 0; }
+
   .actions { display: flex; gap: 8px; margin-top: 10px; }
   .actions button {
     flex: 1;
@@ -83,23 +131,6 @@
     color: #3a7a3a;
   }
   .badge.warn { background: #fbeee7; color: var(--accent-dark); }
-  label.field-label {
-    display: block;
-    font-size: 0.85rem;
-    color: var(--sub);
-    margin-bottom: 6px;
-  }
-  input#keyword {
-    width: 100%;
-    padding: 11px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    margin-bottom: 12px;
-    font-family: inherit;
-  }
-  input#keyword:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  #used-keyword { margin-top: 4px; font-size: 0.82rem; color: var(--sub); }
 </style>
 </head>
 <body>
@@ -115,9 +146,17 @@
     <div id="status"></div>
 
     <div id="result-box">
-      <textarea id="result" readonly></textarea>
+      <label class="field-label" for="title" style="margin-top: 16px;">제목 (수정 가능 · 네이버 제목란에 따로 붙여넣어 주세요)</label>
+      <div class="title-row">
+        <input id="title" type="text">
+        <button id="copy-title">제목 복사</button>
+      </div>
+
+      <label class="field-label" for="result">본문 (나눔고딕 19px · 이모지 28px로 복사됩니다)</label>
+      <div id="result" contenteditable="true"></div>
+
       <div class="actions">
-        <button id="copy">전체 복사</button>
+        <button id="copy">본문 전체 복사</button>
         <button id="regenerate">다시 만들기</button>
       </div>
       <span id="quality-badge" class="badge" style="display:none;"></span>
@@ -130,12 +169,83 @@
 const btn = document.getElementById('generate');
 const regenBtn = document.getElementById('regenerate');
 const copyBtn = document.getElementById('copy');
+const copyTitleBtn = document.getElementById('copy-title');
 const statusEl = document.getElementById('status');
 const resultBox = document.getElementById('result-box');
 const resultEl = document.getElementById('result');
+const titleEl = document.getElementById('title');
 const badgeEl = document.getElementById('quality-badge');
 const keywordInput = document.getElementById('keyword');
 const usedKeywordEl = document.getElementById('used-keyword');
+
+const BODY_FONT_SIZE = '19px';
+const EMOJI_FONT_SIZE = '28px';
+const GRANDSON_EMOJI = '👦🏻';
+const GRANDFATHER_EMOJI = '👴';
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+const HIGHLIGHT_STYLE = 'background-color:#ffd9b3;padding:0 3px;border-radius:3px;';
+
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightKeyword(escapedHtml, keyword) {
+  if (!keyword) return escapedHtml;
+  const escapedKeyword = escapeHtml(keyword);
+  const pattern = new RegExp(escapeRegExp(escapedKeyword), 'g');
+  return escapedHtml.replace(pattern, `<span style="${HIGHLIGHT_STYLE}">${escapedKeyword}</span>`);
+}
+
+// 본문 텍스트를 문단별 HTML로 바꾼다: 손주 발화는 오른쪽 정렬, 할아버지 발화는
+// 왼쪽 정렬(참고한 네이버 블로그 형식), 키워드는 형광펜 하이라이트, 이모지는
+// 28px로 키우고, 사진자리 표시는 점선 박스로 구분한다.
+// 이 HTML은 화면 표시와 클립보드 복사(text/html) 양쪽에 그대로 쓰이므로,
+// 외부 CSS에 의존하지 않도록 인라인 style로 굽는다.
+function renderBodyHtml(text, keyword) {
+  const paragraphs = text.trim().split(/\n\s*\n/);
+  return paragraphs.map(p => {
+    const trimmed = p.trim();
+
+    if (trimmed.startsWith('[사진')) {
+      return `<p style="margin:0 0 1em;padding:14px;background:#f3ede4;border:1px dashed #e7ddd1;border-radius:8px;text-align:center;font-family:'Nanum Gothic',sans-serif;font-size:15px;color:#7a6f65;font-style:italic;">${escapeHtml(trimmed)}</p>`;
+    }
+
+    // 이모지는 줄 앞에서 떼어내 별도 줄로 두고, 대사는 다음 줄부터 시작한다.
+    const isGrandson = trimmed.startsWith(GRANDSON_EMOJI);
+    const isGrandfather = trimmed.startsWith(GRANDFATHER_EMOJI);
+    const speakerEmoji = isGrandson ? GRANDSON_EMOJI : (isGrandfather ? GRANDFATHER_EMOJI : '');
+    const speech = speakerEmoji ? trimmed.slice(speakerEmoji.length).trim() : trimmed;
+
+    let escaped = escapeHtml(speech).replace(/\n/g, '<br>');
+    escaped = highlightKeyword(escaped, keyword);
+
+    const emojiLine = speakerEmoji
+      ? `<span style="font-size:${EMOJI_FONT_SIZE};line-height:1.2;">${speakerEmoji}</span><br>`
+      : '';
+    const align = isGrandson ? 'right' : 'left';
+    return `<p style="margin:0 0 1em;font-family:'Nanum Gothic',sans-serif;font-size:${BODY_FONT_SIZE};line-height:1.7;text-align:${align};">${emojiLine}${escaped}</p>`;
+  }).join('');
+}
+
+async function copyRichText(html, plainText) {
+  try {
+    const item = new ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([plainText], { type: 'text/plain' }),
+    });
+    await navigator.clipboard.write([item]);
+  } catch (err) {
+    // 일부 브라우저는 ClipboardItem 미지원 — 일반 텍스트로 대체
+    await navigator.clipboard.writeText(plainText);
+  }
+}
 
 async function runGenerate() {
   btn.disabled = true;
@@ -158,7 +268,8 @@ async function runGenerate() {
       return;
     }
 
-    resultEl.value = data.draft;
+    titleEl.value = data.title;
+    resultEl.innerHTML = renderBodyHtml(data.body, data.keyword);
     resultBox.style.display = 'block';
     statusEl.textContent = '완성됐어요. 내용을 확인하고 복사해서 붙여넣어 주세요.';
     usedKeywordEl.textContent = '사용된 키워드/주제: ' + data.keyword;
@@ -184,10 +295,17 @@ btn.addEventListener('click', runGenerate);
 regenBtn.addEventListener('click', runGenerate);
 
 copyBtn.addEventListener('click', async () => {
-  await navigator.clipboard.writeText(resultEl.value);
+  await copyRichText(resultEl.innerHTML, resultEl.innerText);
   const original = copyBtn.textContent;
   copyBtn.textContent = '복사됨!';
   setTimeout(() => { copyBtn.textContent = original; }, 1500);
+});
+
+copyTitleBtn.addEventListener('click', async () => {
+  await navigator.clipboard.writeText(titleEl.value);
+  const original = copyTitleBtn.textContent;
+  copyTitleBtn.textContent = '복사됨!';
+  setTimeout(() => { copyTitleBtn.textContent = original; }, 1500);
 });
 </script>
 </body>

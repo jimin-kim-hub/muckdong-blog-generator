@@ -1,11 +1,11 @@
 """3단계: 품질 검사 + 미달 시 재생성. 이 서비스의 핵심 차별점(기획서 3절).
 
-AI 티·키워드 포함·사진자리·가게정보를 자동 점검하고, 미달이면
-QUALITY_MAX_REGEN_ATTEMPTS 만큼 다시 쓴다.
+AI 티·키워드 포함·사진자리·가게정보·제목·이모지 표시를 자동 점검하고,
+미달이면 QUALITY_MAX_REGEN_ATTEMPTS 만큼 다시 쓴다.
 """
 
 from config import QUALITY_MAX_REGEN_ATTEMPTS, QUALITY_MIN_LENGTH, SHOP_INFO
-from generator import generate_draft
+from generator import GRANDFATHER_EMOJI, GRANDSON_EMOJI, generate_draft
 
 AI_TELL_PHRASES = [
     "안녕하세요! 오늘은", "포스팅을 시작하겠습니다", "함께 알아보겠습니다",
@@ -14,25 +14,33 @@ AI_TELL_PHRASES = [
 ]
 
 
-def check_quality(text: str, context: dict) -> dict:
+def check_quality(draft: dict, context: dict) -> dict:
+    title = draft["title"]
+    body = draft["body"]
     reasons = []
 
-    if len(text) < QUALITY_MIN_LENGTH:
-        reasons.append(f"분량 부족 ({len(text)}자 < {QUALITY_MIN_LENGTH}자)")
+    if not title:
+        reasons.append("제목 누락")
 
-    if SHOP_INFO["name"] not in text:
+    if len(body) < QUALITY_MIN_LENGTH:
+        reasons.append(f"분량 부족 ({len(body)}자 < {QUALITY_MIN_LENGTH}자)")
+
+    if SHOP_INFO["name"] not in body:
         reasons.append("가게 이름 미포함")
 
-    if context["keyword"] not in text:
+    if context["keyword"] not in body and context["keyword"] not in title:
         reasons.append(f"키워드 미포함 ('{context['keyword']}')")
 
-    if "[사진" not in text:
+    if "[사진" not in body:
         reasons.append("사진자리 표시 없음")
 
-    if "?" not in text:
+    if "?" not in body:
         reasons.append("손주 질문(Q&A 형식) 흔적 없음")
 
-    found_tells = [p for p in AI_TELL_PHRASES if p in text]
+    if GRANDSON_EMOJI not in body or GRANDFATHER_EMOJI not in body:
+        reasons.append("손주/할아버지 이모지 표시 누락")
+
+    found_tells = [p for p in AI_TELL_PHRASES if p in body]
     if found_tells:
         reasons.append(f"AI 흔적 표현 감지: {', '.join(found_tells)}")
 
@@ -50,7 +58,8 @@ def generate_with_quality_gate(context: dict) -> dict:
 
     best = attempts[-1]
     return {
-        "draft": best["draft"],
+        "title": best["draft"]["title"],
+        "body": best["draft"]["body"],
         "passed": best["result"]["passed"],
         "reasons": best["result"]["reasons"],
         "attempt_count": len(attempts),
