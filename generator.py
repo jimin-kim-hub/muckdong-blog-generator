@@ -17,7 +17,9 @@ from google.genai import types
 
 from config import SHOP_INFO
 
-MODEL = "gemini-3.5-flash"
+# 특정 모델이 일시적 과부하(503)나 무료 할당량 소진(429)으로 막히면
+# 다음 모델로 자동 전환한다. 순서는 대체로 안정적이었던 것부터.
+FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite"]
 
 GRANDSON_EMOJI = "👦🏻"
 GRANDFATHER_EMOJI = "👴"
@@ -110,13 +112,20 @@ def generate_draft(context: dict) -> dict:
         raise RuntimeError("GEMINI_API_KEY가 설정되지 않았습니다.")
 
     client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=build_user_prompt(context),
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            max_output_tokens=900,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
+    prompt = build_user_prompt(context)
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        max_output_tokens=900,
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
     )
-    return parse_output(response.text)
+
+    last_error: Exception | None = None
+    for model in FALLBACK_MODELS:
+        try:
+            response = client.models.generate_content(model=model, contents=prompt, config=config)
+            return parse_output(response.text)
+        except Exception as e:
+            last_error = e
+            continue
+
+    raise last_error
