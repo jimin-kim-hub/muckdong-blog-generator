@@ -16,6 +16,7 @@
     --accent: #b5451b;
     --accent-dark: #8f3714;
     --border: #e7ddd1;
+    --ok: #3a7a3a;
     --font-body: 'Nanum Gothic', -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   }
   * { box-sizing: border-box; }
@@ -51,7 +52,7 @@
     transition: background 0.15s;
   }
   button#generate:hover:not(:disabled) { background: var(--accent-dark); }
-  button#generate:disabled { opacity: 0.5; cursor: not-allowed; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
   #status { margin-top: 12px; font-size: 0.9rem; color: var(--sub); min-height: 1.2em; }
   #status.error { color: var(--accent); }
   #result-box { margin-top: 20px; display: none; }
@@ -62,7 +63,7 @@
     color: var(--sub);
     margin-bottom: 6px;
   }
-  input#keyword {
+  input#keyword, textarea#condition, textarea#feedback {
     width: 100%;
     padding: 11px 12px;
     border: 1px solid var(--border);
@@ -71,8 +72,39 @@
     margin-bottom: 12px;
     font-family: inherit;
   }
-  input#keyword:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  textarea#condition, textarea#feedback {
+    min-height: 70px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  input#keyword:focus, textarea#condition:focus, textarea#feedback:focus,
+  input#title:focus, #result:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
   #used-keyword { margin-top: 4px; font-size: 0.82rem; color: var(--sub); }
+
+  .concept-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  .concept-option { flex: 1; position: relative; }
+  .concept-option input {
+    position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer;
+  }
+  .concept-option label {
+    display: block;
+    padding: 10px 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .concept-option input:checked + label {
+    border-color: var(--accent);
+    background: #fbeee7;
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
 
   .title-row { display: flex; gap: 6px; margin-bottom: 12px; }
   input#title {
@@ -84,8 +116,7 @@
     font-size: 17px;
     font-weight: 700;
   }
-  input#title:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  button#copy-title {
+  button.side-btn {
     padding: 0 14px;
     border-radius: 8px;
     border: 1px solid var(--border);
@@ -106,9 +137,19 @@
     line-height: 1.7;
     overflow-y: auto;
   }
-  #result:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   #result p { margin: 0 0 1em; }
   #result p:last-child { margin-bottom: 0; }
+
+  #tags-row { display: none; gap: 6px; margin-top: 12px; }
+  #tags {
+    flex: 1;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--sub);
+  }
 
   .actions { display: flex; gap: 8px; margin-top: 10px; }
   .actions button {
@@ -128,19 +169,97 @@
     border-radius: 999px;
     font-size: 0.78rem;
     background: #eef6ec;
-    color: #3a7a3a;
+    color: var(--ok);
   }
   .badge.warn { background: #fbeee7; color: var(--accent-dark); }
+
+  /* 발행 전 확인 */
+  .review {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fdfbf8;
+  }
+  .review-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .review-head strong { font-size: 0.95rem; }
+  #review-progress {
+    font-size: 0.82rem;
+    color: var(--sub);
+    font-variant-numeric: tabular-nums;
+  }
+  #review-progress.done { color: var(--ok); font-weight: 700; }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 9px;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    cursor: pointer;
+  }
+  .check-item:last-of-type { margin-bottom: 0; }
+  .check-item input {
+    margin: 2px 0 0;
+    width: 17px;
+    height: 17px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .check-item input:checked + span { color: var(--sub); text-decoration: line-through; }
+  .review-note {
+    margin: 10px 0 0;
+    font-size: 0.78rem;
+    color: var(--sub);
+    line-height: 1.5;
+  }
+  .feedback-block { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); }
+  button#revise {
+    width: 100%;
+    padding: 11px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: #fff;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>묵동홍어마을 블로그 글 생성기</h1>
-  <p class="sub">버튼을 누르면 오늘 날씨·키워드를 반영한 할아버지 말투 블로그 글 초안이 만들어져요.</p>
+  <p class="sub">버튼을 누르면 오늘 날씨·키워드를 반영한 전문가 톤 블로그 글 초안이 만들어져요.</p>
 
   <div class="card">
+    <label class="field-label">글 스타일</label>
+    <div class="concept-row">
+      <div class="concept-option">
+        <input type="radio" name="concept" id="concept-expert" value="expert" checked>
+        <label for="concept-expert">정보형<br>(길게)</label>
+      </div>
+      <div class="concept-option">
+        <input type="radio" name="concept" id="concept-qna" value="qna">
+        <label for="concept-qna">Q&amp;A<br>인터뷰형</label>
+      </div>
+      <div class="concept-option">
+        <input type="radio" name="concept" id="concept-column" value="column">
+        <label for="concept-column">칼럼형<br>(짧게)</label>
+      </div>
+    </div>
+
     <label class="field-label" for="keyword">오늘 쓸 키워드/주제 (비워두면 자동으로 골라줘요)</label>
     <input id="keyword" type="text" maxlength="60" placeholder="예: 홍어 삭히는 법, 가을 보양식, 홍어삼합 후기...">
+
+    <label class="field-label" for="condition">조건·요청사항 (선택)</label>
+    <textarea id="condition" maxlength="500" placeholder="예: 막걸리랑 같이 먹는 걸 강조해주세요&#10;검색 많이 되는 키워드를 본문에 자연스럽게 섞어주세요&#10;초보자도 부담 없게 조금 더 짧게"></textarea>
 
     <button id="generate">오늘의 블로그 글 만들기</button>
     <div id="status"></div>
@@ -149,18 +268,59 @@
       <label class="field-label" for="title" style="margin-top: 16px;">제목 (수정 가능 · 네이버 제목란에 따로 붙여넣어 주세요)</label>
       <div class="title-row">
         <input id="title" type="text">
-        <button id="copy-title">제목 복사</button>
+        <button id="copy-title" class="side-btn">제목 복사</button>
       </div>
 
-      <label class="field-label" for="result">본문 (나눔고딕 16px · 이모지 28px로 복사됩니다)</label>
+      <label class="field-label" for="result">본문 (나눔고딕 16px)</label>
       <div id="result" contenteditable="true"></div>
 
       <div class="actions">
         <button id="copy">본문 전체 복사</button>
-        <button id="regenerate">다시 만들기</button>
+        <button id="regenerate">완전히 새로 쓰기</button>
       </div>
+
+      <div id="tags-row">
+        <input id="tags" type="text">
+        <button id="copy-tags" class="side-btn">태그 복사</button>
+      </div>
+
       <span id="quality-badge" class="badge" style="display:none;"></span>
       <div id="used-keyword"></div>
+
+      <div class="review">
+        <div class="review-head">
+          <strong>발행 전 확인</strong>
+          <span id="review-progress">0/4 확인</span>
+        </div>
+
+        <label class="check-item">
+          <input type="checkbox" class="review-check">
+          <span>가게 설명이 실제와 맞나요? (AI가 지어낸 내용은 없는지)</span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" class="review-check">
+          <span>메뉴 이름·구성이 정확한가요?</span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" class="review-check">
+          <span>홍어 관련 정보가 사실인가요?</span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" class="review-check">
+          <span>사진 자리를 모두 확인했나요?</span>
+        </label>
+
+        <p class="review-note" id="review-note">
+          AI가 쓴 초안이라 가게 운영 방식처럼 확인이 필요한 문장이 섞일 수 있어요.
+          발행 전에 한 번씩만 봐주세요.
+        </p>
+
+        <div class="feedback-block">
+          <label class="field-label" for="feedback">고치고 싶은 부분을 적어주세요</label>
+          <textarea id="feedback" maxlength="500" placeholder="예: 홍어애탕 설명이 너무 짧아요&#10;막걸리랑 같이 먹는 얘기를 넣어주세요"></textarea>
+          <button id="revise">피드백 반영해서 고치기</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -168,20 +328,30 @@
 <script>
 const btn = document.getElementById('generate');
 const regenBtn = document.getElementById('regenerate');
+const reviseBtn = document.getElementById('revise');
 const copyBtn = document.getElementById('copy');
 const copyTitleBtn = document.getElementById('copy-title');
+const copyTagsBtn = document.getElementById('copy-tags');
 const statusEl = document.getElementById('status');
 const resultBox = document.getElementById('result-box');
 const resultEl = document.getElementById('result');
 const titleEl = document.getElementById('title');
+const tagsEl = document.getElementById('tags');
+const tagsRow = document.getElementById('tags-row');
 const badgeEl = document.getElementById('quality-badge');
 const keywordInput = document.getElementById('keyword');
+const conditionInput = document.getElementById('condition');
+const feedbackInput = document.getElementById('feedback');
 const usedKeywordEl = document.getElementById('used-keyword');
+const reviewChecks = document.querySelectorAll('.review-check');
+const reviewProgress = document.getElementById('review-progress');
 
 const BODY_FONT_SIZE = '16px';
-const EMOJI_FONT_SIZE = '28px';
-const GRANDSON_EMOJI = '👦🏻';
-const GRANDFATHER_EMOJI = '👴';
+const HIGHLIGHT_STYLE = 'background-color:#ffd9b3;padding:0 3px;border-radius:3px;';
+
+// 서버가 실제로 사용한 키워드. 피드백 수정 때 같은 키워드를 그대로 써야
+// 엉뚱한 주제로 바뀌지 않는다(빈 칸이면 서버가 매번 새로 뽑기 때문).
+let usedKeyword = null;
 
 function escapeHtml(str) {
   return str
@@ -189,8 +359,6 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
-
-const HIGHLIGHT_STYLE = 'background-color:#ffd9b3;padding:0 3px;border-radius:3px;';
 
 function escapeRegExp(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -203,9 +371,13 @@ function highlightKeyword(escapedHtml, keyword) {
   return escapedHtml.replace(pattern, `<span style="${HIGHLIGHT_STYLE}">${escapedKeyword}</span>`);
 }
 
-// 본문 텍스트를 문단별 HTML로 바꾼다: 손주 발화는 오른쪽 정렬, 할아버지 발화는
-// 왼쪽 정렬(참고한 네이버 블로그 형식), 키워드는 형광펜 하이라이트, 이모지는
-// 28px로 키우고, 사진자리 표시는 점선 박스로 구분한다.
+function selectedConcept() {
+  const checked = document.querySelector('input[name="concept"]:checked');
+  return checked ? checked.value : 'expert';
+}
+
+// 본문 텍스트를 문단별 HTML로 바꾼다. Q./A.로 시작하는 문단은 라벨을
+// 굵게 표시하고, 사진자리는 점선 박스, 키워드는 형광펜으로 표시한다.
 // 이 HTML은 화면 표시와 클립보드 복사(text/html) 양쪽에 그대로 쓰이므로,
 // 외부 CSS에 의존하지 않도록 인라인 style로 굽는다.
 function renderBodyHtml(text, keyword) {
@@ -217,20 +389,27 @@ function renderBodyHtml(text, keyword) {
       return `<p style="margin:0 0 1em;padding:14px;background:#f3ede4;border:1px dashed #e7ddd1;border-radius:8px;text-align:center;font-family:'Nanum Gothic',sans-serif;font-size:15px;color:#7a6f65;font-style:italic;">${escapeHtml(trimmed)}</p>`;
     }
 
-    // 이모지는 줄 앞에서 떼어내 별도 줄로 두고, 대사는 다음 줄부터 시작한다.
-    const isGrandson = trimmed.startsWith(GRANDSON_EMOJI);
-    const isGrandfather = trimmed.startsWith(GRANDFATHER_EMOJI);
-    const speakerEmoji = isGrandson ? GRANDSON_EMOJI : (isGrandfather ? GRANDFATHER_EMOJI : '');
-    const speech = speakerEmoji ? trimmed.slice(speakerEmoji.length).trim() : trimmed;
+    let label = '';
+    let labelColor = '';
+    let rest = trimmed;
+    if (trimmed.startsWith('Q.')) {
+      label = 'Q.';
+      labelColor = '#b5451b';
+      rest = trimmed.slice(2).trim();
+    } else if (trimmed.startsWith('A.')) {
+      label = 'A.';
+      labelColor = '#7a6f65';
+      rest = trimmed.slice(2).trim();
+    }
 
-    let escaped = escapeHtml(speech).replace(/\n/g, '<br>');
+    let escaped = escapeHtml(rest).replace(/\n/g, '<br>');
     escaped = highlightKeyword(escaped, keyword);
 
-    const emojiLine = speakerEmoji
-      ? `<span style="font-size:${EMOJI_FONT_SIZE};line-height:1.2;">${speakerEmoji}</span><br>`
+    const labelHtml = label
+      ? `<strong style="color:${labelColor};margin-right:6px;">${label}</strong>`
       : '';
-    const align = isGrandson ? 'right' : 'left';
-    return `<p style="margin:0 0 1em;font-family:'Nanum Gothic',sans-serif;font-size:${BODY_FONT_SIZE};line-height:1.7;text-align:${align};">${emojiLine}${escaped}</p>`;
+
+    return `<p style="margin:0 0 1em;font-family:'Nanum Gothic',sans-serif;font-size:${BODY_FONT_SIZE};line-height:1.7;text-align:left;">${labelHtml}${escaped}</p>`;
   }).join('');
 }
 
@@ -247,17 +426,70 @@ async function copyRichText(html, plainText) {
   }
 }
 
-async function runGenerate() {
-  btn.disabled = true;
-  regenBtn.disabled = true;
-  statusEl.textContent = '오늘 날씨·키워드를 확인하고 글을 쓰는 중이에요… (최대 30초)';
-  statusEl.classList.remove('error');
+function flashButton(button, text) {
+  const original = button.textContent;
+  button.textContent = text;
+  setTimeout(() => { button.textContent = original; }, 1500);
+}
 
+function updateReviewProgress() {
+  const total = reviewChecks.length;
+  const done = document.querySelectorAll('.review-check:checked').length;
+  reviewProgress.textContent = done === total ? '발행 준비 완료' : `${done}/${total} 확인`;
+  reviewProgress.classList.toggle('done', done === total);
+}
+
+function resetReview() {
+  reviewChecks.forEach(c => { c.checked = false; });
+  updateReviewProgress();
+}
+
+reviewChecks.forEach(c => c.addEventListener('change', updateReviewProgress));
+
+function applyResult(data) {
+  usedKeyword = data.keyword;
+  titleEl.value = data.title;
+  resultEl.innerHTML = renderBodyHtml(data.body, data.keyword);
+  resultBox.style.display = 'block';
+  usedKeywordEl.textContent = '사용된 키워드/주제: ' + data.keyword;
+
+  if (data.tags) {
+    tagsEl.value = data.tags;
+    tagsRow.style.display = 'flex';
+  } else {
+    tagsRow.style.display = 'none';
+  }
+
+  if (data.passed) {
+    badgeEl.textContent = '품질 검사 통과';
+    badgeEl.className = 'badge';
+  } else {
+    badgeEl.textContent = '품질 검사 일부 미달 — 내용을 확인해 주세요';
+    badgeEl.className = 'badge warn';
+  }
+  badgeEl.style.display = 'inline-block';
+
+  // 글이 바뀌었으면 확인도 처음부터 다시 해야 한다.
+  resetReview();
+}
+
+function setBusy(busy, message) {
+  btn.disabled = busy;
+  regenBtn.disabled = busy;
+  reviseBtn.disabled = busy;
+  if (message) {
+    statusEl.textContent = message;
+    statusEl.classList.remove('error');
+  }
+}
+
+async function postJson(url, payload, busyMessage) {
+  setBusy(true, busyMessage);
   try {
-    const res = await fetch('/api/generate', {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keyword: keywordInput.value.trim() || null }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
 
@@ -265,48 +497,72 @@ async function runGenerate() {
       const detail = typeof data.detail === 'string' ? data.detail : '잠시 후 다시 시도해 주세요.';
       statusEl.textContent = detail;
       statusEl.classList.add('error');
-      return;
+      return null;
     }
-
-    titleEl.value = data.title;
-    resultEl.innerHTML = renderBodyHtml(data.body, data.keyword);
-    resultBox.style.display = 'block';
-    statusEl.textContent = '완성됐어요. 내용을 확인하고 복사해서 붙여넣어 주세요.';
-    usedKeywordEl.textContent = '사용된 키워드/주제: ' + data.keyword;
-
-    if (data.passed) {
-      badgeEl.textContent = '품질 검사 통과';
-      badgeEl.className = 'badge';
-    } else {
-      badgeEl.textContent = '품질 검사 일부 미달 — 내용을 확인해 주세요';
-      badgeEl.className = 'badge warn';
-    }
-    badgeEl.style.display = 'inline-block';
+    return data;
   } catch (err) {
     statusEl.textContent = '잠시 후 다시 시도해 주세요.';
     statusEl.classList.add('error');
+    return null;
   } finally {
-    btn.disabled = false;
-    regenBtn.disabled = false;
+    setBusy(false);
   }
+}
+
+async function runGenerate() {
+  const data = await postJson('/api/generate', {
+    keyword: keywordInput.value.trim() || null,
+    concept: selectedConcept(),
+    condition: conditionInput.value.trim() || null,
+  }, '오늘 날씨·키워드를 확인하고 글을 쓰는 중이에요… (최대 40초)');
+
+  if (!data) return;
+  applyResult(data);
+  feedbackInput.value = '';
+  statusEl.textContent = '완성됐어요. 아래 확인 항목을 보시고 복사해 주세요.';
+}
+
+async function runRevise() {
+  const feedback = feedbackInput.value.trim();
+  if (!feedback) {
+    feedbackInput.focus();
+    return;
+  }
+
+  const data = await postJson('/api/revise', {
+    keyword: usedKeyword,
+    concept: selectedConcept(),
+    condition: conditionInput.value.trim() || null,
+    feedback: feedback,
+    previous_title: titleEl.value,
+    previous_body: resultEl.innerText,
+  }, '피드백을 반영해서 고치는 중이에요… (최대 40초)');
+
+  if (!data) return;
+  applyResult(data);
+  statusEl.textContent = '고쳤어요. 바뀐 부분을 확인해 주세요.';
 }
 
 btn.addEventListener('click', runGenerate);
 regenBtn.addEventListener('click', runGenerate);
+reviseBtn.addEventListener('click', runRevise);
 
 copyBtn.addEventListener('click', async () => {
   await copyRichText(resultEl.innerHTML, resultEl.innerText);
-  const original = copyBtn.textContent;
-  copyBtn.textContent = '복사됨!';
-  setTimeout(() => { copyBtn.textContent = original; }, 1500);
+  flashButton(copyBtn, '복사됨!');
 });
 
 copyTitleBtn.addEventListener('click', async () => {
   await navigator.clipboard.writeText(titleEl.value);
-  const original = copyTitleBtn.textContent;
-  copyTitleBtn.textContent = '복사됨!';
-  setTimeout(() => { copyTitleBtn.textContent = original; }, 1500);
+  flashButton(copyTitleBtn, '복사됨!');
 });
+
+copyTagsBtn.addEventListener('click', async () => {
+  await navigator.clipboard.writeText(tagsEl.value);
+  flashButton(copyTagsBtn, '복사됨!');
+});
+
+updateReviewProgress();
 </script>
 </body>
 </html>
