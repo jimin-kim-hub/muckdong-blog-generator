@@ -74,8 +74,19 @@ def get_holiday_name(today: date | None = None) -> str | None:
 
 
 def get_popular_keyword() -> str:
-    """카테고리를 먼저 고르고 그 안에서 키워드를 골라, 특정 카테고리로
-    쏠리지 않고 브랜드·지역·음식·정보·상황 검색이 고르게 섞이게 한다."""
+    """네이버 키워드도구가 살아있으면 절반의 확률로 실시간 인기 키워드(모바일
+    검색량 상위)를 쓰고, 나머지 절반은 카테고리를 먼저 고르고 그 안에서
+    키워드를 골라 브랜드·지역·음식·정보·상황 검색이 고르게 섞이게 한다.
+    API가 없거나 실패하면 항상 카테고리 방식으로 폴백한다."""
+    try:
+        from naver_keywords import get_cached_keywords
+        live_keywords = get_cached_keywords()
+    except Exception:
+        live_keywords = []
+
+    if live_keywords and random.random() < 0.5:
+        return random.choice(live_keywords[:8])
+
     category = random.choice(list(POPULAR_KEYWORDS_BY_CATEGORY.keys()))
     return random.choice(POPULAR_KEYWORDS_BY_CATEGORY[category])
 
