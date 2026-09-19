@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
-from collector import collect_context
+from collector import collect_context, list_suggested_keywords
 from generator import CONCEPTS, DEFAULT_CONCEPT
 from quality import generate_with_quality_gate, revise_with_quality_check
 
@@ -86,6 +86,13 @@ def _response(result: dict, context: dict, concept: str) -> dict:
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse(request, "index.html")
+
+
+@app.get("/api/keywords")
+def keywords():
+    """키워드 입력칸 아래 추천 칩에 쓸 목록. 생성 비용이 안 드는 조회라
+    연타 방지·일일 제한을 적용하지 않는다."""
+    return list_suggested_keywords()
 
 
 @app.post("/api/generate")

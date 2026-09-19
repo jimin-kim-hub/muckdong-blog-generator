@@ -84,6 +84,35 @@
   }
   #used-keyword { margin-top: 4px; font-size: 0.82rem; color: var(--sub); }
 
+  #keyword-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: -6px 0 14px;
+  }
+  #keyword-suggestions .kw-label {
+    width: 100%;
+    font-size: 0.78rem;
+    color: var(--sub);
+    margin-bottom: 2px;
+  }
+  .kw-chip {
+    padding: 5px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+    font-size: 0.8rem;
+    color: var(--sub);
+    cursor: pointer;
+  }
+  .kw-chip:hover { border-color: var(--accent); color: var(--accent-dark); }
+  .kw-chip.selected {
+    border-color: var(--accent);
+    background: #fbeee7;
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
+
   .concept-row { display: flex; gap: 6px; margin-bottom: 14px; }
   .concept-option { flex: 1; position: relative; }
   .concept-option input {
@@ -257,6 +286,7 @@
 
     <label class="field-label" for="keyword">오늘 쓸 키워드/주제 (비워두면 자동으로 골라줘요)</label>
     <input id="keyword" type="text" maxlength="60" placeholder="예: 홍어 삭히는 법, 가을 보양식, 홍어삼합 후기...">
+    <div id="keyword-suggestions"></div>
 
     <label class="field-label" for="condition">조건·요청사항 (선택)</label>
     <textarea id="condition" maxlength="500" placeholder="예: 막걸리랑 같이 먹는 걸 강조해주세요&#10;검색 많이 되는 키워드를 본문에 자연스럽게 섞어주세요&#10;초보자도 부담 없게 조금 더 짧게"></textarea>
@@ -340,6 +370,7 @@ const tagsEl = document.getElementById('tags');
 const tagsRow = document.getElementById('tags-row');
 const badgeEl = document.getElementById('quality-badge');
 const keywordInput = document.getElementById('keyword');
+const keywordSuggestionsEl = document.getElementById('keyword-suggestions');
 const conditionInput = document.getElementById('condition');
 const feedbackInput = document.getElementById('feedback');
 const usedKeywordEl = document.getElementById('used-keyword');
@@ -562,7 +593,48 @@ copyTagsBtn.addEventListener('click', async () => {
   flashButton(copyTagsBtn, '복사됨!');
 });
 
+function markSelectedChip() {
+  keywordSuggestionsEl.querySelectorAll('.kw-chip').forEach(chip => {
+    chip.classList.toggle('selected', chip.textContent === keywordInput.value.trim());
+  });
+}
+
+async function loadKeywordSuggestions() {
+  try {
+    const res = await fetch('/api/keywords');
+    if (!res.ok) return;
+    const data = await res.json();
+    const keywords = data.keywords || [];
+    if (!keywords.length) return;
+
+    keywordSuggestionsEl.innerHTML = '';
+    const label = document.createElement('div');
+    label.className = 'kw-label';
+    label.textContent = data.live
+      ? '추천 키워드 (네이버 실시간 검색어 포함 · 눌러서 선택)'
+      : '추천 키워드 (눌러서 선택)';
+    keywordSuggestionsEl.appendChild(label);
+
+    keywords.forEach(kw => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'kw-chip';
+      chip.textContent = kw;
+      chip.addEventListener('click', () => {
+        keywordInput.value = kw;
+        markSelectedChip();
+      });
+      keywordSuggestionsEl.appendChild(chip);
+    });
+  } catch (err) {
+    // 추천 목록이 없어도 직접 입력은 그대로 되므로 조용히 무시한다.
+  }
+}
+
+keywordInput.addEventListener('input', markSelectedChip);
+
 updateReviewProgress();
+loadKeywordSuggestions();
 </script>
 </body>
 </html>

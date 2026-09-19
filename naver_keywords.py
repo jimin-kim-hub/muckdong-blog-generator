@@ -21,7 +21,8 @@ API_URL = "https://api.searchad.naver.com/keywordstool"
 URI = "/keywordstool"
 
 # 시드 키워드 — 이 단어들과 관련해 실제로 검색되는 연관 키워드를 받아온다.
-SEED_KEYWORDS = ["홍어", "묵동 홍어", "홍어삼합"]
+# hintKeywords는 키워드 안에 공백이 있으면 400을 반환하므로 붙여 쓴다.
+SEED_KEYWORDS = ["홍어", "묵동홍어", "홍어삼합"]
 TOP_N = 15
 
 logger = logging.getLogger("uvicorn.error")
@@ -71,6 +72,9 @@ def fetch_keywords() -> list[str]:
         headers=_headers(),
         timeout=8,
     )
+    if not resp.ok:
+        # 네이버가 돌려주는 에러 본문(코드·사유)까지 로그에 남겨서 원인을 바로 알 수 있게 한다.
+        logger.error("네이버 키워드도구 응답 오류 %s: %s", resp.status_code, resp.text[:500])
     resp.raise_for_status()
     items = resp.json().get("keywordList", [])
 

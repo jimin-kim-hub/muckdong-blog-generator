@@ -73,22 +73,35 @@ def get_holiday_name(today: date | None = None) -> str | None:
     return kr_holidays.get(today)
 
 
+def _get_live_keywords() -> list[str]:
+    try:
+        from naver_keywords import get_cached_keywords
+        return get_cached_keywords()
+    except Exception:
+        return []
+
+
 def get_popular_keyword() -> str:
     """네이버 키워드도구가 살아있으면 절반의 확률로 실시간 인기 키워드(모바일
     검색량 상위)를 쓰고, 나머지 절반은 카테고리를 먼저 고르고 그 안에서
     키워드를 골라 브랜드·지역·음식·정보·상황 검색이 고르게 섞이게 한다.
     API가 없거나 실패하면 항상 카테고리 방식으로 폴백한다."""
-    try:
-        from naver_keywords import get_cached_keywords
-        live_keywords = get_cached_keywords()
-    except Exception:
-        live_keywords = []
+    live_keywords = _get_live_keywords()
 
     if live_keywords and random.random() < 0.5:
         return random.choice(live_keywords[:8])
 
     category = random.choice(list(POPULAR_KEYWORDS_BY_CATEGORY.keys()))
     return random.choice(POPULAR_KEYWORDS_BY_CATEGORY[category])
+
+
+def list_suggested_keywords(limit: int = 20) -> dict:
+    """화면에 추천 키워드 칩으로 보여줄 목록. 네이버 실시간 인기 키워드를
+    앞에 두고, 정적 카테고리 키워드로 채운다(중복 제거, 순서 유지)."""
+    live_keywords = _get_live_keywords()
+    static_keywords = [kw for group in POPULAR_KEYWORDS_BY_CATEGORY.values() for kw in group]
+    combined = list(dict.fromkeys(live_keywords + static_keywords))
+    return {"keywords": combined[:limit], "live": bool(live_keywords)}
 
 
 def collect_context(keyword: str | None = None) -> dict:
