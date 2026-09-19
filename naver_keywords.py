@@ -12,6 +12,7 @@ import hashlib
 import hmac
 import logging
 import os
+import random
 import time
 from datetime import date
 
@@ -20,9 +21,16 @@ import requests
 API_URL = "https://api.searchad.naver.com/keywordstool"
 URI = "/keywordstool"
 
-# 시드 키워드 — 이 단어들과 관련해 실제로 검색되는 연관 키워드를 받아온다.
-# hintKeywords는 키워드 안에 공백이 있으면 400을 반환하므로 붙여 쓴다.
-SEED_KEYWORDS = ["홍어", "묵동홍어", "홍어삼합"]
+# hintKeywords는 한 번에 최대 5개까지만 보낼 수 있다. 매번 같은 5개를
+# 보내면 하루 1회 캐싱 특성상 후보군이 계속 똑같아지므로, 이 풀에서
+# 매일(캐시가 갱신될 때) 5개를 무작위로 뽑아 보낸다 — 날마다 다른 조합의
+# 연관 키워드가 나오게 하기 위함. hintKeywords는 키워드 안에 공백이
+# 있으면 400을 반환하므로 전부 붙여 쓴다.
+SEED_KEYWORD_POOL = [
+    "홍어", "묵동홍어", "홍어삼합", "홍어무침", "홍어애탕",
+    "삭힌홍어", "홍어회", "홍어탕", "중랑구홍어", "먹골역홍어",
+]
+SEEDS_PER_CALL = 5
 TOP_N = 15
 
 # 네이버 키워드도구는 "홍어"처럼 넓은 시드에 대해 전국 단위로 느슨하게
@@ -74,10 +82,12 @@ def _parse_count(value) -> float:
 
 
 def fetch_keywords() -> list[str]:
-    """연관 키워드를 모바일 검색량 순으로 정렬해 상위 TOP_N개를 반환한다."""
+    """시드 풀에서 5개를 무작위로 뽑아 연관 키워드를 모바일 검색량 순으로
+    정렬해 상위 TOP_N개를 반환한다."""
+    seeds = random.sample(SEED_KEYWORD_POOL, min(SEEDS_PER_CALL, len(SEED_KEYWORD_POOL)))
     resp = requests.get(
         API_URL,
-        params={"hintKeywords": ",".join(SEED_KEYWORDS), "showDetail": 1},
+        params={"hintKeywords": ",".join(seeds), "showDetail": 1},
         headers=_headers(),
         timeout=8,
     )
