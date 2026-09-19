@@ -25,6 +25,15 @@ URI = "/keywordstool"
 SEED_KEYWORDS = ["홍어", "묵동홍어", "홍어삼합"]
 TOP_N = 15
 
+# 네이버 키워드도구는 "홍어"처럼 넓은 시드에 대해 전국 단위로 느슨하게
+# 연관된 키워드(다른 지역 맛집 등)까지 섞어 준다. 이 중 하나라도 포함된
+# 키워드만 남겨 주제에서 벗어나지 않게 한다.
+RELEVANCE_TERMS = ["홍어", "묵동", "중랑구", "먹골"]
+
+
+def _is_relevant(keyword: str) -> bool:
+    return any(term in keyword for term in RELEVANCE_TERMS)
+
 logger = logging.getLogger("uvicorn.error")
 
 _cache: dict = {"date": None, "keywords": []}
@@ -77,6 +86,7 @@ def fetch_keywords() -> list[str]:
         logger.error("네이버 키워드도구 응답 오류 %s: %s", resp.status_code, resp.text[:500])
     resp.raise_for_status()
     items = resp.json().get("keywordList", [])
+    items = [item for item in items if _is_relevant(item.get("relKeyword", ""))]
 
     items.sort(key=lambda item: _parse_count(item.get("monthlyMobileQcCnt")), reverse=True)
     keywords = [item["relKeyword"] for item in items if item.get("relKeyword")]
